@@ -2,26 +2,38 @@ package com.example.demo
 
 import androidx.appcompat.app.AppCompatActivity
 import android.os.Bundle
+import android.util.Log
 import android.view.View
 import android.view.inputmethod.InputMethodManager
 import android.widget.EditText
 import android.widget.Toast
+import androidx.activity.viewModels
+import androidx.lifecycle.Observer
+import androidx.lifecycle.ViewModelProvider
+import androidx.lifecycle.viewModelScope
 import com.example.demo.databinding.ActivityAddTodoBinding
-import com.example.demo.modal.Todo
-import com.example.demo.modal.User
+import com.example.demo.room.TodoSchema
+import com.example.demo.room.TodoViewModal
+import com.example.demo.room.UserSchema
+import com.example.demo.room.UserViewModal
+import com.google.android.material.snackbar.Snackbar
+import dagger.hilt.android.AndroidEntryPoint
+import kotlinx.coroutines.flow.collect
+import kotlinx.coroutines.launch
 
+@AndroidEntryPoint
 class TodoAddActivity : AppCompatActivity() {
-    lateinit var user: User
+    lateinit var user: UserSchema
     lateinit var binding:ActivityAddTodoBinding
     private val TAG = "TodoAddActivity"
+    val viewModal:TodoViewModal by viewModels()
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         binding = ActivityAddTodoBinding.inflate(layoutInflater)
         val view = binding.root
         setContentView(view)
-
         // user get from back activity
-        user = intent.extras?.getParcelable<User>("obj")!!
+        user = intent.extras?.getParcelable<UserSchema>("obj")!!
 
         binding.editextJobName.setOnClickListener {
             binding.editextDescription.requestFocus()
@@ -31,33 +43,38 @@ class TodoAddActivity : AppCompatActivity() {
             binding.btnAdd.requestFocus()
         }
         binding.btnAdd.setOnClickListener {
-            if(ValidationCheck(des= binding.editextDescription, editextJobName = binding.editextJobName)) {
-                var des = binding.editextDescription.text.trim().toString()
-                var jobName = binding.editextJobName.text.trim().toString()
-                InsertTodo(des =des,jobName =jobName)
+            view -> hideKeyboard(view)
+            var todo = TodoSchema(
+                description = binding.editextDescription.text.trim().toString(),
+                job = binding.editextJobName.text.trim().toString(),
+                email = user.email
+            )
+            viewModal.addTodo(todo)
+            viewModal.viewModelScope.launch {
+                viewModal.todoUiState.collect {
+                        data ->
+                    when(data) {
+                        is TodoViewModal.TodoAddUiState.Loading -> {
+                            Snackbar.make(view,"Loading", Snackbar.LENGTH_SHORT).show()
+                        }
+                        is TodoViewModal.TodoAddUiState.Error -> {
+                            Snackbar.make(view,data.message, Snackbar.LENGTH_SHORT).show()
+                        }
+                        is TodoViewModal.TodoAddUiState.Success -> {
+                            var user = data.todo
+                            Snackbar.make(view,"Successfully Todo is Created !!", Snackbar.LENGTH_SHORT).show()
+                            this@TodoAddActivity.finish()
+                        }
+                        else ->  {
+                            Snackbar.make(view,"Nothing to do!!", Snackbar.LENGTH_SHORT).show()
+                        }
+                    }
+                }
             }
         }
     }
 
-    private fun InsertTodo(des: String, jobName: String) {
-        var db =DbHelper(this)
-        var todo_obj = Todo(user_email = user.email,description = des,id = "0",job = jobName)
-        db.addTodo(todo_obj)
-        Toast.makeText(this,"Successfully todo added!!",Toast.LENGTH_LONG).show()
-        this.finish()
-    }
 
-    fun ValidationCheck(des: EditText, editextJobName: EditText):Boolean {
-        if(editextJobName.text.isNullOrEmpty()) {
-            Toast.makeText(this,"Please enter job name",Toast.LENGTH_LONG).show()
-            return false
-        }
-        if(des.text.isNullOrBlank()) {
-            Toast.makeText(this,"Please description of job",Toast.LENGTH_LONG).show()
-            return false
-        }
-        return true
-    }
     private fun hideKeyboard(v: View) {
         val inputMethodManager: InputMethodManager = getSystemService(INPUT_METHOD_SERVICE) as InputMethodManager
         inputMethodManager.hideSoftInputFromWindow(v.applicationWindowToken, 0)

@@ -7,16 +7,16 @@ class Session(var ctx: Context) {
     var prefs: SharedPreferences = ctx.getSharedPreferences("todo-app", Context.MODE_PRIVATE)
     private var editor: SharedPreferences.Editor = prefs.edit()
 
-    fun setLoggedin(logggedin: Boolean,emial:String,pass:String,name:String,id:String) {
-        editor.putBoolean("loggedInmode", logggedin)
-        editor.putString("email", emial)
-        editor.putString("pass", pass)
-        editor.putString("name",name)
+    fun setLoggedIn(loggedIn:Boolean,email:String,password:String,username:String,id:String) {
+        editor.putBoolean("loggedInMode",loggedIn)
+        editor.putString("email", email)
+        editor.putString("pass", password)
+        editor.putString("name",username)
         editor.putString("id",id)
         editor.commit()
     }
-    fun loggedin(): Boolean {
-        return prefs.getBoolean("loggedInmode", false)
+    fun loggedIn(): Boolean {
+        return prefs.getBoolean("loggedInMode", false)
     }
 
     fun getName(): String? {

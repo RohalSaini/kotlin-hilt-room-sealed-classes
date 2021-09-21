@@ -9,16 +9,24 @@ import android.util.Log
 import android.view.View
 import android.view.inputmethod.InputMethodManager
 import android.widget.*
+import androidx.activity.viewModels
+import androidx.lifecycle.ViewModelProvider
+import androidx.lifecycle.viewModelScope
 import com.example.demo.databinding.ActivityRegistrationBinding
-import com.example.demo.modal.User
+import com.example.demo.room.UserViewModal
+import com.google.android.material.snackbar.Snackbar
+import dagger.hilt.android.AndroidEntryPoint
+import kotlinx.coroutines.flow.collect
+import kotlinx.coroutines.launch
 
+@AndroidEntryPoint
 class RegistrationActivity : AppCompatActivity(), AdapterView.OnItemSelectedListener {
-
     private lateinit var binding: ActivityRegistrationBinding
     lateinit var radioButton_gender: RadioButton
     lateinit var countries:Array<String>
     lateinit var city:String
     private val TAG = "RegistrationActivity"
+    val viewModal:UserViewModal by viewModels()
 
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -26,38 +34,40 @@ class RegistrationActivity : AppCompatActivity(), AdapterView.OnItemSelectedList
         binding = ActivityRegistrationBinding.inflate(layoutInflater)
         val view = binding.root
         setContentView(view)
-
         countries = resources.getStringArray(R.array.cities_array)
         binding.editextCity.onItemSelectedListener= this
 
         ArrayAdapter(this,android.R.layout.simple_spinner_item,countries)
-            .also {
-                    adapter ->  binding.editextCity.adapter = adapter
-            }
+            .also { adapter ->  binding.editextCity.adapter = adapter }
 
         binding.buttonLogin.setOnClickListener {
-            if(ValidationChecking()) {
-                var gender= ""
-                var updates = "No"
-                if(binding.checkboxUpdates.isChecked) {
-                    updates = "Yes"
-                }
-                val selectedId = binding.radioGroup.checkedRadioButtonId
-                radioButton_gender = findViewById(selectedId)
-                if (selectedId == -1) {
-                    Toast.makeText(this, "Please select Gender", Toast.LENGTH_SHORT).show()
-                } else {
-                    gender = radioButton_gender.text.toString()
-                }
-                println(" Name : ${binding.editextUsername.text}  \n Password: ${binding.editextPasssword.text}  \n Email : ${binding.editextEmailAddress.text}  \n City: $city \n want updates: $updates \n Gender: $gender")
-                Toast.makeText(this," Name : ${binding.editextUsername.text}  \n Password: ${binding.editextPasssword.text}  \n Email : ${binding.editextEmailAddress.text}  \n City: $city \n want updates: $updates \n Gender: $gender",Toast.LENGTH_LONG).show()
-
-                var obj = User(
-                    id= "undefined",
-                    username = binding.editextUsername.text.trim().toString(),
-                    pasword = binding.editextPasssword.text.trim().toString(),
-                    email = binding.editextEmailAddress.text.trim().toString())
-                InsertIntoDatabase(obj= obj)
+            viewModal.registerUser(
+                        username = binding.editextUsername.text.trim().toString(),
+                        password = binding.editextPasssword.text.trim().toString(),
+                        email = binding.editextEmailAddress.text.trim().toString(),
+                        context = this
+            )
+            viewModal.viewModelScope.launch {
+                viewModal.registerUiState.collect {
+                        data ->
+                        when(data) {
+                            is UserViewModal.RegisterUiState.Loading -> {
+                                Snackbar.make(view,"Loading", Snackbar.LENGTH_SHORT).show()
+                            }
+                            is UserViewModal.RegisterUiState.Error -> {
+                                Snackbar.make(view,data.message, Snackbar.LENGTH_SHORT).show()
+                            }
+                            is UserViewModal.RegisterUiState.Success -> {
+                                var user = data.user
+                                Log.d("Register User",user.toString())
+                                Snackbar.make(view,"Successfully User Created", Snackbar.LENGTH_SHORT).show()
+                                callingToActivity()
+                            }
+                            else ->  {
+                                Snackbar.make(view,"Nothing to do!!", Snackbar.LENGTH_SHORT).show()
+                            }
+                        }
+                    }
             }
         }
 
@@ -82,19 +92,10 @@ class RegistrationActivity : AppCompatActivity(), AdapterView.OnItemSelectedList
         }
     }
 
-    private fun InsertIntoDatabase(obj: User) {
-        try {
-            val db = DbHelper(this).addUser(obj)  // creating User in the database
-        }catch (e:Exception) {
-            Log.e(TAG,e.message.toString())
-        }
-        callingToAvtivity()
-    }
 
 
-    private fun callingToAvtivity() {
-        var intent = Intent(this,LoginActivity::class.java)
-        startActivity(intent)
+    private fun callingToActivity() {
+        startActivity(Intent(this,LoginActivity::class.java))
     }
 
     override fun onItemSelected(p0: AdapterView<*>?, p1: View?, position: Int, p3: Long) {
@@ -107,27 +108,7 @@ class RegistrationActivity : AppCompatActivity(), AdapterView.OnItemSelectedList
     }
 
     private fun hideKeyboard(v: View) {
-        val inputMethodManager: InputMethodManager = getSystemService(INPUT_METHOD_SERVICE) as InputMethodManager
+        val inputMethodManager: InputMethodManager = (getSystemService(INPUT_METHOD_SERVICE) as InputMethodManager)
         inputMethodManager.hideSoftInputFromWindow(v.applicationWindowToken, 0)
-    }
-    private fun ValidationChecking() :Boolean{
-        if (binding.editextUsername.text.trim().isEmpty() || binding.editextUsername.text.trim().length<5) {
-            Toast.makeText(this,"Enter username with minimum 5 character",Toast.LENGTH_LONG).show()
-            return  false;
-        }
-        if(binding.editextPasssword.text.trim().isBlank() || binding.editextPasssword.text.isNullOrEmpty() ) {
-            Toast.makeText(this,"Enter Password ",Toast.LENGTH_SHORT).show()
-            return false
-        }
-        if(binding.editextEmailAddress.text.trim().isBlank() || binding.editextEmailAddress.text.trim().isEmpty() || !android.util.Patterns.EMAIL_ADDRESS.matcher(binding.editextEmailAddress.text.trim()).matches()) {
-            Toast.makeText(this,"Enter valid email Adreess ",Toast.LENGTH_SHORT).show()
-            return false
-        }
-        return true
-    }
-
-    private fun inputCheck(firstName:String,lastName:String,age:Editable) :Boolean{
-        // to convert to Int Integer.parseInt(age.toString())
-        return !(TextUtils.isEmpty(firstName) && TextUtils.isEmpty(lastName) && age.isEmpty() )
     }
 }

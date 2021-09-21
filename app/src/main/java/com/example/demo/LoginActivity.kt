@@ -5,28 +5,46 @@ import android.os.Bundle
 import android.util.Log
 import android.view.View
 import android.view.inputmethod.InputMethodManager
-import android.widget.Toast
+import android.widget.ScrollView
+import androidx.activity.viewModels
 import androidx.appcompat.app.AppCompatActivity
-import com.example.demo.databinding.ActivityLoginBinding
-import com.example.demo.modal.User
+import androidx.lifecycle.ViewModelProvider
+import androidx.lifecycle.viewModelScope
+import com.example.demo.Adapter.Car
+import com.example.demo.databinding.*
+import com.example.demo.room.UserSchema
+import com.example.demo.room.UserViewModal
 import com.google.android.material.snackbar.Snackbar
+import dagger.hilt.android.AndroidEntryPoint
+import kotlinx.coroutines.flow.collect
+import kotlinx.coroutines.launch
+import javax.inject.Inject
+import javax.inject.Named
 
 
+@AndroidEntryPoint
 class LoginActivity : AppCompatActivity() {
-    lateinit var binding: ActivityLoginBinding
+    private lateinit var binding: ActivityLoginBinding
     val TAG = "LOGIN ACTIVITY"
-    lateinit var db :DbHelper
+    val viewModal:UserViewModal by viewModels()
+    private lateinit var view:ScrollView
+
+    @Inject
+    @Named("app_name")
+    lateinit var name:String
+
+    @Inject
+    lateinit var car:Car
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         binding = ActivityLoginBinding.inflate(layoutInflater)
-        val view = binding.root
+        view = binding.root
         setContentView(view)
-
+        Log.d("activity",name)
+        car.getName()
         settingOnClickListener()
-        var session = Session(this)
-        if(session.loggedin()) {
-           var obj = User(id = session.getId().toString(),username = session.getName().toString(),pasword = session.getPassword().toString(),email = session.getEmail().toString())
-           callToActivity(obj)
+        if(viewModal.loginStatus()) {
+            callToActivity(obj= viewModal.getLoginDetail())
         }
     }
 
@@ -40,71 +58,47 @@ class LoginActivity : AppCompatActivity() {
         }
         binding.btnLogin.setOnClickListener {
             hideKeyboard(it)
-            if(ValidationChecking()) {
-                var email = binding.editextEmailAddress.text.trim()
-                var password = binding.editextPasssword.text.trim()
-                callDbToCheckUser(email = email,password= password,it)
+            viewModal.login(
+                email = binding.editextEmailAddress.text.trim().toString(),
+                password = binding.editextPasssword.text.toString(),
+                context = this
+            )
+            viewModal.viewModelScope.launch {
+                viewModal.loginUiState.collect {
+                    data ->
+                    when(data) {
+                        is UserViewModal.LoginUiState.Loading -> {
+                            Snackbar.make(view,"Loading",Snackbar.LENGTH_SHORT).show()
+                        }
+                        is UserViewModal.LoginUiState.Error -> {
+                            Snackbar.make(view,data.message,Snackbar.LENGTH_SHORT).show()
+                        }
+                        is UserViewModal.LoginUiState.Success -> {
+                            var user = data.user
+                            Snackbar.make(view,"Successfully User login",Snackbar.LENGTH_SHORT).show()
+                            callToActivity(obj= user)
+                        }
+                        else ->  {
+                            Snackbar.make(view,"Nothing to do!!",Snackbar.LENGTH_SHORT).show()
+                        }
+                    }
+                }
             }
         }
 
         binding.registerHere.setOnClickListener {
-            var intent = Intent(this,RegistrationActivity::class.java)
-            startActivity(intent)
+            startActivity(Intent(this,RegistrationActivity::class.java))
         }
     }
-
-    private fun callDbToCheckUser(email: CharSequence, password: CharSequence, view: View) {
-        try {
-            val obj = DbHelper(this).getUser(email = email.toString())
-            when {
-                obj == null -> {
-                    Snackbar
-                        .make(view,"Wrong email address", Snackbar.LENGTH_LONG)
-                        .show()
-                }
-                obj.pasword != password.toString() -> {
-                    Snackbar
-                        .make(view,"Wrong password filled, please fill correct one", Snackbar.LENGTH_LONG)
-                        .show(); // Don’t forget to show!
-                }
-                else -> {
-
-                    var session = Session(this)
-                    session.setLoggedin(true,obj.email,obj.pasword,obj.username,obj.id)
-
-                    callToActivity(obj= obj)
-                    Log.d(TAG, "Data is $obj")
-                }
-            }
-        }catch (exception:Exception) {
-            Log.e(TAG,exception.message.toString())
-            Snackbar
-                .make(view,"Email  is not correct ,Please fill valid email address", Snackbar.LENGTH_LONG)
-                .show(); // Don’t forget to show!
-
-        }
+    private fun callToActivity(obj: UserSchema) {
+        startActivity(
+            Intent(this,DashboardActivity::class.java)
+                .putExtra("obj",obj))
     }
 
-    private fun callToActivity(obj: User) {
-        var intent = Intent(this,DashboardActivity::class.java)
-        intent.putExtra("obj",obj)
-        startActivity(intent)
-    }
-
-    private fun ValidationChecking() :Boolean{
-        if (binding.editextEmailAddress.text.trim().isEmpty() || !android.util.Patterns.EMAIL_ADDRESS.matcher(binding.editextEmailAddress.text.trim()).matches()) {
-            Toast.makeText(this,"Enter valid email address",Toast.LENGTH_LONG).show()
-            return  false;
-        }
-        if(binding.editextPasssword.text.trim().isBlank() || binding.editextPasssword.text.isNullOrEmpty() ) {
-            Toast.makeText(this,"Enter Password ",Toast.LENGTH_SHORT).show()
-            return false
-        }
-        return true
-    }
     private fun hideKeyboard(v: View) {
-        val inputMethodManager:InputMethodManager= getSystemService(INPUT_METHOD_SERVICE) as InputMethodManager
-        inputMethodManager.hideSoftInputFromWindow(v.applicationWindowToken, 0)
+        (getSystemService(INPUT_METHOD_SERVICE) as InputMethodManager)
+            .hideSoftInputFromWindow(v.applicationWindowToken, 0)
     }
 
     override fun onRestart() {

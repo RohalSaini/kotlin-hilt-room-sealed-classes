@@ -1,102 +1,117 @@
 package com.example.demo
 
-import android.annotation.SuppressLint
 import android.content.DialogInterface
 import android.content.Intent
 import android.os.Bundle
 import android.util.Log
 import android.view.MenuItem
 import android.view.View
-import android.widget.Toast
+import android.widget.TextView
+import androidx.activity.viewModels
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.view.GravityCompat
 import androidx.drawerlayout.widget.DrawerLayout
+import androidx.lifecycle.Observer
+import androidx.lifecycle.ViewModelProvider
+import androidx.lifecycle.viewModelScope
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.StaggeredGridLayoutManager
+import androidx.swiperefreshlayout.widget.SwipeRefreshLayout
+import com.example.demo.Adapter.Car
 import com.example.demo.Adapter.RecylerViewAdpater
-import com.example.demo.modal.User
 import com.google.android.material.navigation.NavigationView
 import com.example.demo.databinding.ActivityDashboardBinding
-import com.example.demo.modal.Todo
+import com.example.demo.room.TodoSchema
+import com.example.demo.room.TodoViewModal
+import com.example.demo.room.UserSchema
+import com.google.android.material.snackbar.Snackbar
+import dagger.hilt.android.AndroidEntryPoint
+import kotlinx.coroutines.*
 import java.lang.Exception
-import androidx.swiperefreshlayout.widget.SwipeRefreshLayout
-import androidx.swiperefreshlayout.widget.SwipeRefreshLayout.OnRefreshListener
+import javax.inject.Inject
+import javax.inject.Named
 
 
+@AndroidEntryPoint
 class DashboardActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelectedListener {
     private val TAG = "DASHBOARD ACTIVITY"
     lateinit var binding:ActivityDashboardBinding
-    lateinit var user:User
-    var todoList:MutableList<Todo> = mutableListOf()
+    lateinit var user:UserSchema
+    lateinit var view:DrawerLayout
+    var todoList:MutableList<TodoSchema> = mutableListOf()
     lateinit var adapter:RecylerViewAdpater
+    val modal: TodoViewModal by viewModels()
+    var mlist:MutableList<TodoSchema> = mutableListOf()
+    @Inject
+    @Named("activity")
+    lateinit var str:String
 
-     @SuppressLint("WrongConstant", "NotifyDataSetChanged")
+    @Inject
+    lateinit var car: Car
      override fun onCreate(savedInstanceState: Bundle?) {
          super.onCreate(savedInstanceState)
          binding = ActivityDashboardBinding.inflate(layoutInflater)
-         val view = binding.root
+         view = binding.root
          setContentView(view)
-
+         car.getName()
+         Log.d("Activity",str)
          // Getting data from parser
-         user = intent.extras?.getParcelable<User>("obj")!!
+         user = intent.extras?.getParcelable<UserSchema>("obj")!!
+         // Printing User Detail on Navigation View
+         modal.viewModelScope.launch {
+                modal.getUserWithEmail(email = user.email,index = 0,limit = 2).observe(this@DashboardActivity, Observer {
+                     mlist -> Log.d("User List",mlist.toString())
+                      todoList = mlist.toMutableList()
+                 val staggeredGridLayoutManager = StaggeredGridLayoutManager(1,LinearLayoutManager.VERTICAL)
+                 binding.emptyRecylerView.visibility = View.INVISIBLE
+                 adapter = RecylerViewAdpater(this@DashboardActivity,list = todoList,listener = object :RecylerViewAdpater.OnClickListener{
+                     override fun onDelete(todo:TodoSchema) {
+                         modal.deleteTodoByID(todo =todo  )
+                     }
 
+                     override fun onUpdate(todo: TodoSchema): TodoSchema {
+                         try {
+                             modal.updateTodoByID(todo)
+                         }catch (error:Exception) {
+                             Log.e(TAG,error.message.toString())
+                         }
+                        return todo
+                     }
+                 })
+                 binding.baseAdpater.layoutManager = staggeredGridLayoutManager
+                 binding.baseAdpater.adapter = adapter
+             })
+         }
+         binding.navView.getHeaderView(0).findViewById<TextView>(R.id.right_side_menu).text = user.username
+
+         // navigation open on Click
          binding.navView.setNavigationItemSelectedListener(this)
          binding.floatAddTodo.setOnClickListener {
-             var intent = Intent(this,TodoAddActivity::class.java)
-                 intent.putExtra("obj",user)
-                 startActivity(intent)
+             startActivity(Intent(this, TodoAddActivity::class.java).putExtra("obj", user))
          }
-         try {
-             var db = DbHelper(this)
-             todoList =db.getTodoByEmail(user.email,"0")
-         } catch (error:Exception){
-            Log.e(TAG,error.message.toString())
+         binding.layputToolbar.expandedMenu.setOnClickListener {
+             openDrawer(binding.drawerLayout)
          }
-         binding.swiperefreshLayout.setOnRefreshListener(OnRefreshListener {
-             var db = DbHelper(this)
-             var temp = db.getTodoByEmail(user.email,todoList.size.toString())
-             for(todo in temp) {
-                 todoList.add(todo)
+         binding.swiperefreshLayout.setOnRefreshListener(SwipeRefreshLayout.OnRefreshListener {
+             modal.viewModelScope.launch {
+                 // todo 4 -> 1,2,3,4
+                 modal.getUserWithEmail(email = user.email,index = todoList.size,limit = 2).observe(this@DashboardActivity, Observer {
+                         mlist -> Log.d("User List",mlist.toString())
+                         for(item in mlist) {
+                             todoList.add(item)
+                         }
+                     adapter.notifyDataSetChanged()
+                 })
              }
-             //todoList = db.getTodoByEmail(user.email)
-             adapter.notifyDataSetChanged()
-             binding.swiperefreshLayout.isRefreshing = false
+                binding.swiperefreshLayout.isRefreshing = false
          })
-         binding.layputToolbar.settings.setOnClickListener {
-             logout(this)
-         }
-//         binding.layputToolbar.expandedMenu.setOnClickListener {
-//             Log.d("One Id is", "Home button clicked")
-//         }
-//         binding.layputToolbar.appName.setOnClickListener {
-//             Log.d("Two Id is", "app named clicked")
-//         }
-//         binding.layputToolbar.settings.setOnClickListener {
-//             Log.d("three Id is", "setting clicked")
-//         }
-//         binding.navView.getHeaderView(0).setOnClickListener {
-//             Log.d("Header view", " header view clicked")
-//         }
-         if(todoList.isNotEmpty()) {
-             val staggeredGridLayoutManager = StaggeredGridLayoutManager(1,LinearLayoutManager.VERTICAL)
-             binding.emptyRecylerView.visibility = View.INVISIBLE
-             adapter = RecylerViewAdpater(this,todoList)
-             binding.baseAdpater.layoutManager = staggeredGridLayoutManager
-             binding.baseAdpater.adapter = adapter
-         }
      }
 
-    private fun clickMenu(view: View) {
-        openDrawer(binding.drawerLayout)
-    }
-    private fun Logout(view: View) {
-       closeDrawer(binding.drawerLayout)
-    }
 
     private fun closeDrawer(drawerLayout: DrawerLayout) {
         if(drawerLayout.isDrawerOpen(GravityCompat.START)) {
-            drawerLayout.closeDrawer(GravityCompat.END)
+            // drawerLayout.closeDrawer(GravityCompat.END)
         }
     }
 
@@ -111,12 +126,17 @@ class DashboardActivity : AppCompatActivity(), NavigationView.OnNavigationItemSe
                                     dialog, i ->
                                             mainActivity.finish()
                                             var session = Session(this)
-                                                session.setLoggedin(false,"","","","")
+                                                session.setLoggedIn(
+                                                    loggedIn = false,
+                                                    email = " ",
+                                                    password = "",
+                                                    username = "",
+                                                    id = "")
                                                 session.removeAll()
                                                 finish()
                              })
                             .setNegativeButton("No",DialogInterface.OnClickListener {
-                                    dialogInterface, i ->
+                                    dialogInterface, _ ->
                                 dialogInterface.dismiss()
                             }).show()
 
@@ -129,21 +149,17 @@ class DashboardActivity : AppCompatActivity(), NavigationView.OnNavigationItemSe
 
     override fun onNavigationItemSelected(item: MenuItem): Boolean {
         when (item.itemId) {
-            binding.navView.menu.getItem(0).itemId -> Toast.makeText(this, "Home Clicked", Toast.LENGTH_LONG).show()
-            binding.navView.menu.getItem(1).itemId -> Toast.makeText(this, "Dashboard Clicked", Toast.LENGTH_LONG).show()
-            binding.navView.menu.getItem(2).itemId -> logout(this)
+            binding.navView.menu.getItem(0).itemId ->  Snackbar.make(view,"Main View is called",Snackbar.LENGTH_SHORT).show()
+            binding.navView.menu.getItem(1).itemId -> logout(this)
         }
         return true
     }
     override fun onBackPressed() {
-        val builder = AlertDialog.Builder(this)
-        builder.setCancelable(false)
-        builder.setMessage("Do you want to Exit?")
-        builder.setPositiveButton("Yes") { dialog, which -> //if user pressed "yes", then he is allowed to exit from application
-            finishAffinity()
-        }
-        builder.setNegativeButton("No") { dialog, which -> //if user select "No", just cancel this dialog and continue with app
-            dialog.cancel()
-        }.create().show()
+        AlertDialog.Builder(this)
+            .setCancelable(false)
+            .setMessage("Do you want to Exit?")
+            .setPositiveButton("Yes") { _,_ -> finishAffinity() }
+            .setNegativeButton("No") { dialog,_ -> dialog.cancel() }
+            .create().show()
     }
 }

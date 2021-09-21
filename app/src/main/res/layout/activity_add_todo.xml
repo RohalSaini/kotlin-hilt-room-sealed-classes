@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<RelativeLayout
+<androidx.constraintlayout.widget.ConstraintLayout
     xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
@@ -9,8 +9,11 @@
     tools:context=".TodoAddActivity">
     <include
          android:id="@+id/toolbar"
-        layout="@layout/toolbaar">
-    </include>
+        layout="@layout/toolbaar"
+        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintLeft_toLeftOf="parent"
+        app:layout_constraintRight_toRightOf="parent">
+    </include>k
 
     <TextView
         android:text="ADD TODO"
@@ -18,10 +21,11 @@
         android:textStyle="bold"
         android:textColor="@color/black"
         android:layout_width="wrap_content"
-        android:layout_centerHorizontal="true"
-        android:layout_marginTop="100dp"
         android:layout_height="wrap_content"
-        android:id="@+id/textView_username"/>
+        android:id="@+id/textView_username"
+        app:layout_constraintTop_toBottomOf="@+id/toolbar"
+        app:layout_constraintLeft_toLeftOf="parent"
+        app:layout_constraintRight_toRightOf="parent"/>
 
     <EditText
         android:id="@+id/editext_job_name"
@@ -35,7 +39,8 @@
         android:background="@drawable/rounded_cornor"
         android:gravity="center"
         android:hint="Enter Job Name"
-        android:padding="20px" />
+        android:padding="20px"
+        app:layout_constraintTop_toBottomOf="@+id/textView_username"/>
 
     <EditText
         android:id="@+id/editext_description"
@@ -48,7 +53,8 @@
         android:layout_marginBottom="50dp"
         android:background="@drawable/rounded_cornor"
         android:gravity="center"
-        android:hint="Enter Description about your todo" />
+        android:hint="Enter Description about your todo"
+        app:layout_constraintTop_toBottomOf="@+id/editext_job_name"/>
 
     <Button
         android:id="@+id/btn_add"
@@ -58,10 +64,12 @@
         android:layout_centerHorizontal="true"
         android:layout_marginStart="20dp"
         android:layout_marginEnd="20dp"
+        android:layout_marginTop="40dp"
         android:background="@drawable/rounded_btn"
         android:padding="20dp"
         android:text="Save"
         android:textColor="@color/black"
-        android:textSize="20sp" />
+        android:textSize="20sp"
+        app:layout_constraintTop_toBottomOf="@+id/editext_description"/>
 
-</RelativeLayout>
+</androidx.constraintlayout.widget.ConstraintLayout>

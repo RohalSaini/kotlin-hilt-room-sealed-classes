@@ -1,13 +1,12 @@
 <?xml version="1.0" encoding="utf-8"?>
-<ScrollView
-    xmlns:android="http://schemas.android.com/apk/res/android"
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
     tools:context=".RegistrationActivity">
-    <RelativeLayout
+    <androidx.constraintlayout.widget.ConstraintLayout
         android:layout_width="match_parent"
-        android:orientation="vertical"
         android:layout_height="wrap_content">
         <TextView
             android:id="@+id/labeled_registration"
@@ -15,16 +14,17 @@
             android:layout_height="wrap_content"
             android:text="@string/registration"
             android:layout_marginTop="@dimen/_20dp"
-            android:layout_marginStart="@dimen/_40dp"
             android:textSize="@dimen/_20sp"
             android:textColor="@color/black"
-            android:textStyle="bold"/>
+            android:textStyle="bold"
+            app:layout_constraintLeft_toLeftOf="parent"
+            app:layout_constraintRight_toRightOf="parent"
+            app:layout_constraintTop_toTopOf="parent"/>
 
         <EditText
             android:id="@+id/editext_username"
             android:layout_width="match_parent"
             android:layout_height="@dimen/_40dp"
-            android:layout_below="@+id/labeled_registration"
             android:layout_marginStart="@dimen/_40dp"
             android:layout_marginTop="@dimen/_20dp"
             android:layout_marginEnd="@dimen/_40dp"
@@ -32,13 +32,13 @@
             android:inputType="text"
             android:maxLines="1"
             android:padding="@dimen/_5dp"
-            android:visibility="visible" />
+            android:visibility="visible"
+            app:layout_constraintTop_toBottomOf="@+id/labeled_registration"/>
 
         <EditText
             android:id="@+id/editext_passsword"
             android:layout_width="match_parent"
             android:layout_height="40dp"
-            android:layout_below="@+id/editext_username"
             android:layout_marginLeft="@dimen/_40dp"
             android:layout_marginTop="@dimen/_20dp"
             android:layout_marginRight="@dimen/_40dp"
@@ -46,13 +46,13 @@
             android:inputType="textPassword"
             android:paddingStart="@dimen/_5dp"
             android:paddingEnd="@dimen/_5dp"
-            android:visibility="visible" />
+            android:visibility="visible"
+            app:layout_constraintTop_toBottomOf="@+id/editext_username"/>
 
         <EditText
             android:id="@+id/editext_emailAddress"
             android:layout_width="match_parent"
             android:layout_height="40dp"
-            android:layout_below="@+id/editext_passsword"
             android:layout_marginLeft="@dimen/_40dp"
             android:layout_marginTop="@dimen/_20dp"
             android:layout_marginRight="@dimen/_40dp"
@@ -60,13 +60,13 @@
             android:inputType="textEmailAddress"
             android:paddingStart="@dimen/_5dp"
             android:paddingEnd="@dimen/_5dp"
-            android:visibility="visible" />
+            android:visibility="visible"
+            app:layout_constraintTop_toBottomOf="@+id/editext_passsword"/>
 
         <Spinner
             android:id="@+id/editext_city"
             android:layout_width="match_parent"
             android:layout_height="@dimen/_40dp"
-            android:layout_below="@+id/editext_emailAddress"
             android:layout_marginLeft="@dimen/_40dp"
             android:layout_marginTop="@dimen/_20dp"
             android:layout_marginRight="@dimen/_40dp"
@@ -75,10 +75,10 @@
             android:paddingStart="@dimen/_5dp"
             android:paddingEnd="@dimen/_5dp"
             android:textColor="@color/color_purple"
-            android:visibility="visible" />
+            android:visibility="visible"
+            app:layout_constraintTop_toBottomOf="@+id/editext_emailAddress"/>
         <CheckBox
             android:visibility="visible"
-            android:layout_below="@+id/editext_city"
             android:id="@+id/checkbox_updates"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
@@ -88,7 +88,8 @@
             android:textStyle="bold"
             android:paddingStart="@dimen/_5dp"
             android:paddingEnd="@dimen/_5dp"
-            android:text="@string/updates_want"/>
+            android:text="@string/updates_want"
+            app:layout_constraintTop_toBottomOf="@id/editext_city"/>
         <RadioGroup
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
@@ -96,8 +97,9 @@
             android:layout_marginTop="@dimen/_20dp"
             android:orientation="horizontal"
             android:visibility="visible"
-            android:layout_below="@+id/checkbox_updates"
-            android:id="@+id/radioGroup">
+            android:id="@+id/radioGroup"
+            app:layout_constraintTop_toBottomOf="@+id/checkbox_updates"
+            app:layout_constraintStart_toStartOf="parent">
             <RadioButton
                 android:id="@+id/radioMale"
                 android:layout_width="wrap_content"
@@ -122,7 +124,6 @@
         </RadioGroup>
         <Button
             android:id="@+id/button_login"
-            android:layout_below="@+id/radioGroup"
             android:layout_marginLeft="@dimen/_40dp"
             android:layout_marginRight="@dimen/_40dp"
             android:text="@string/login"
@@ -132,6 +133,7 @@
             android:layout_marginTop="@dimen/_20dp"
             android:padding="@dimen/_5dp"
             android:layout_width="match_parent"
-            android:layout_height="wrap_content"/>
-    </RelativeLayout>
+            android:layout_height="wrap_content"
+            app:layout_constraintTop_toBottomOf="@+id/radioGroup"/>
+    </androidx.constraintlayout.widget.ConstraintLayout>
 </ScrollView>
